@@ -1,0 +1,34 @@
+# ── FACodec Codec LM experiment ───────────────────────────────────────────
+codec: facodec
+wsj0_root: /home/franka/Development/mds5122/wsj0
+token_cache_dir: /home/franka/Development/mds5122/token_cache/facodec
+out_dir: /home/franka/Development/mds5122/checkpoints/facodec_lm
+device: cuda
+
+# FACodec paths — fill in after downloading checkpoint from HuggingFace
+facodec_repo: /home/franka/Development/mds5122/FAcodec
+facodec_ckpt: /home/franka/Development/mds5122/FAcodec/checkpoints/FAcodec.pth
+facodec_cfg:  /home/franka/Development/mds5122/FAcodec/configs/config.yml
+
+# Training
+batch_size: 32
+max_len: 320        # 4 sec @ 80 fps
+epochs: 100
+lr: 1e-4
+weight_decay: 0.01
+warmup_steps: 500
+save_freq: 10
+
+# Model — same architecture for fair comparison
+model:
+  vocab_size: 1025
+  d_model: 512
+  n_heads: 8
+  n_layers: 6
+  ffn_dim: 2048
+  max_len: 512
+  dropout: 0.1
+
+# Inference
+temperature: 1.0
+top_k: 200

@@ -1,0 +1,29 @@
+# ── EnCodec Codec LM experiment ──────────────────────────────────────────
+codec: encodec
+wsj0_root: /home/franka/Development/mds5122/wsj0
+token_cache_dir: /home/franka/Development/mds5122/token_cache/encodec
+out_dir: /home/franka/Development/mds5122/checkpoints/encodec_lm
+device: cuda
+
+# Training
+batch_size: 32
+max_len: 300        # 4 sec @ 75 fps
+epochs: 100
+lr: 1e-4
+weight_decay: 0.01
+warmup_steps: 500
+save_freq: 10       # save checkpoint every N epochs
+
+# Model
+model:
+  vocab_size: 1025
+  d_model: 512
+  n_heads: 8
+  n_layers: 6
+  ffn_dim: 2048
+  max_len: 512
+  dropout: 0.1
+
+# Inference
+temperature: 1.0
+top_k: 200
