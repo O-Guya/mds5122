@@ -63,7 +63,7 @@ class CodecWrapper:
     # EnCodec init
     # ------------------------------------------------------------------
     def _init_encodec(self):
-        from encodec.encodec import EncodecModel
+        from encodec.model import EncodecModel
         model = EncodecModel.encodec_model_24khz(pretrained=True)
         model.set_target_bandwidth(1.5)  # 2 codebooks at 24kHz
         model = model.to(self.device).eval()
