@@ -10,7 +10,7 @@ batch_size: 32
 max_len: 300        # 4 sec @ 75 fps
 epochs: 100
 lr: 0.0001
-weight_decay: 0.01
+weight_decay: 0.05    # 增加：0.01 → 0.05
 warmup_steps: 500
 save_freq: 10       # save checkpoint every N epochs
 
@@ -22,7 +22,7 @@ model:
   n_layers: 6
   ffn_dim: 2048
   max_len: 512
-  dropout: 0.1
+  dropout: 0.2       # 增加：0.1 → 0.2
 
 # Inference
 temperature: 1.0
