@@ -81,8 +81,22 @@ def train(cfg: dict):
 
     global_step = 0
     best_val_loss = float("inf")
+    start_epoch = 1
 
-    for epoch in range(1, epochs + 1):
+    # ── Resume from checkpoint ─────────────────────────────────────────────
+    resume_ckpt = cfg.get("resume", None)
+    if resume_ckpt and Path(resume_ckpt).exists():
+        print(f"Resuming from {resume_ckpt}")
+        ckpt = torch.load(resume_ckpt, map_location=device)
+        model.load_state_dict(ckpt["model"])
+        optimizer.load_state_dict(ckpt["optimizer"])
+        if "scheduler" in ckpt:
+            scheduler.load_state_dict(ckpt["scheduler"])
+        start_epoch = ckpt.get("epoch", 0) + 1
+        global_step = ckpt.get("global_step", (start_epoch - 1) * len(train_dl))
+        print(f"Resumed from epoch {start_epoch - 1}, starting at epoch {start_epoch}")
+
+    for epoch in range(start_epoch, epochs + 1):
         model.train()
         running_loss = 0.0
         for batch in tqdm(train_dl, desc=f"Epoch {epoch}", leave=False):
@@ -126,10 +140,15 @@ def train(cfg: dict):
         if avg_val < best_val_loss:
             best_val_loss = avg_val
             torch.save({"epoch": epoch, "model": model.state_dict(),
-                        "optimizer": optimizer.state_dict()},
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": scheduler.state_dict(),
+                        "global_step": global_step},
                        out_dir / "best.pt")
         if epoch % cfg.get("save_freq", 10) == 0:
-            torch.save({"epoch": epoch, "model": model.state_dict()},
+            torch.save({"epoch": epoch, "model": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": scheduler.state_dict(),
+                        "global_step": global_step},
                        out_dir / f"epoch_{epoch:04d}.pt")
 
     writer.close()
