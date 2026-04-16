@@ -62,8 +62,6 @@ ls token_cache/encodec/test/*.pt | wc -l   # 应约 400
 # 提取所有 split（约 30 分钟）
 pixi run python scripts/extract_tokens.py \
     --codec facodec \
-    --wsj0_root /home/franka/Development/mds5122/wsj0 \
-    --out_dir /home/franka/Development/mds5122/token_cache \
     --split all \
     --facodec_repo /home/franka/Development/mds5122/FAcodec \
     --facodec_ckpt /home/franka/Development/mds5122/FAcodec/checkpoints/FAcodec.pth \
