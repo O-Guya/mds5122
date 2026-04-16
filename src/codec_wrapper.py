@@ -160,9 +160,9 @@ class CodecWrapper:
         encoder = self._facodec["encoder"]
         quantizer = self._facodec["quantizer"]
         z = encoder(wav)
-        # n_c=1: use 1 content codebook
-        codes_list, _ = quantizer.encode(z, wav, n_c=1)
-        codes_c = codes_list[0]                     # [B, 1, T_frames]
+        # Directly use content_quantizer (bypass encode() which requires timbre_quantizer)
+        # n_quantizers=1: use 1 content codebook
+        z_c, codes_c, _, _, _ = quantizer.content_quantizer(z, n_quantizers=1)
         return codes_c[:, 0, :]                     # [B, T_frames]
 
     def _decode_facodec(self, codes: torch.Tensor) -> torch.Tensor:
