@@ -1,15 +1,23 @@
 .worktrees/
 
+# Environment (.pixi is in .git/info/exclude or global gitignore)
+.pixi/
+
 # Large files (downloaded from HuggingFace)
 checkpoints/
-FAcodec/checkpoints/
 *.pth
 *.bin
+
+# Third-party repos (cloned for code reuse)
+FAcodec/
+encodec/
 
 # Cache
 __pycache__/
 *.pyc
+*.egg-info/
 
 # Data
-wsj0/
+dataset/
 token_cache/
+results/*.json

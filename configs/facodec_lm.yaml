@@ -1,6 +1,6 @@
 # ── FACodec Codec LM experiment ───────────────────────────────────────────
 codec: facodec
-wsj0_root: /home/franka/Development/mds5122/wsj0
+wsj0_root: /home/franka/Development/mds5122/dataset/wsj0
 token_cache_dir: /home/franka/Development/mds5122/token_cache/facodec
 out_dir: /home/franka/Development/mds5122/checkpoints/facodec_lm
 device: cuda
@@ -21,7 +21,7 @@ save_freq: 10
 
 # Model — same architecture for fair comparison
 model:
-  vocab_size: 1025
+  vocab_size: 1026
   d_model: 512
   n_heads: 8
   n_layers: 6
@@ -30,5 +30,5 @@ model:
   dropout: 0.2       # 增加：0.1 → 0.2
 
 # Inference
-temperature: 1.0
-top_k: 200
+temperature: 0.8
+top_k: 100

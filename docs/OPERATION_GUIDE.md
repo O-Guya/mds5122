@@ -9,16 +9,28 @@
 
 ---
 
+## 环境说明
+
+**重要**: 所有 `pixi run` 命令必须加 `env -u HTTP_PROXY -u HTTPS_PROXY` 前缀。
+大写代理变量（端口 15732）会导致 pixi/uv 无法访问 PyPI，小写代理（端口 7897）正常工作。
+
+为方便使用，可设置别名：
+```bash
+PIXI="env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run"
+```
+
+---
+
 ## 一、环境准备
 
 ```bash
 cd /home/franka/Development/mds5122
 
 # 确保环境已安装（已完成）
-pixi install
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi install
 
 # 验证 CUDA
-pixi run python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.cuda.is_available()}')"
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.cuda.is_available()}')"
 # 预期输出: PyTorch: 2.3.x, CUDA: True
 ```
 
@@ -28,41 +40,31 @@ pixi run python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {t
 
 ### 2.1 EnCodec Token 提取
 
-**已完成**: train split (12,776 文件)
-
-**待执行**: val 和 test split
-
 ```bash
-# 提取 val split（约 5 分钟）
-pixi run python scripts/extract_tokens.py \
+# 提取所有 split（约 15 分钟）
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python scripts/extract_tokens.py \
     --codec encodec \
-    --wsj0_root /home/franka/Development/mds5122/wsj0 \
+    --wsj0_root /home/franka/Development/mds5122/dataset/wsj0 \
     --out_dir /home/franka/Development/mds5122/token_cache \
-    --split val
-
-# 提取 test split（约 5 分钟）
-pixi run python scripts/extract_tokens.py \
-    --codec encodec \
-    --wsj0_root /home/franka/Development/mds5122/wsj0 \
-    --out_dir /home/franka/Development/mds5122/token_cache \
-    --split test
+    --split all --device cuda
 ```
 
 **验证**:
 ```bash
-# 检查文件数量
-ls token_cache/encodec/train/*.pt | wc -l  # 应约 12776
-ls token_cache/encodec/val/*.pt | wc -l    # 应约 400
-ls token_cache/encodec/test/*.pt | wc -l   # 应约 400
+ls token_cache/encodec/train/*.pt | wc -l  # 应为 12776
+ls token_cache/encodec/val/*.pt | wc -l    # 应为 1206
+ls token_cache/encodec/test/*.pt | wc -l   # 应为 651
 ```
 
 ### 2.2 FACodec Token 提取
 
 ```bash
-# 提取所有 split（约 30 分钟）
-pixi run python scripts/extract_tokens.py \
+# 提取所有 split（约 15 分钟）
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python scripts/extract_tokens.py \
     --codec facodec \
-    --split all \
+    --wsj0_root /home/franka/Development/mds5122/dataset/wsj0 \
+    --out_dir /home/franka/Development/mds5122/token_cache \
+    --split all --device cuda \
     --facodec_repo /home/franka/Development/mds5122/FAcodec \
     --facodec_ckpt /home/franka/Development/mds5122/FAcodec/checkpoints/FAcodec.pth \
     --facodec_cfg /home/franka/Development/mds5122/FAcodec/configs/config.yml
@@ -70,9 +72,9 @@ pixi run python scripts/extract_tokens.py \
 
 **验证**:
 ```bash
-ls token_cache/facodec/train/*.pt | wc -l
-ls token_cache/facodec/val/*.pt | wc -l
-ls token_cache/facodec/test/*.pt | wc -l
+ls token_cache/facodec/train/*.pt | wc -l  # 应为 12776
+ls token_cache/facodec/val/*.pt | wc -l    # 应为 1206
+ls token_cache/facodec/test/*.pt | wc -l   # 应为 651
 ```
 
 ---
@@ -82,33 +84,36 @@ ls token_cache/facodec/test/*.pt | wc -l
 ### 3.1 EnCodec LM 训练
 
 ```bash
-# 训练 EnCodec 语言模型（约 4-6 小时）
-pixi run python src/train.py --config configs/encodec_lm.yaml
+# 训练 EnCodec 语言模型（约 30-40 分钟）
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python src/train.py \
+    --config configs/encodec_lm.yaml
 ```
 
 **监控训练**:
 ```bash
 # 另开终端查看 TensorBoard
-pixi run tensorboard --logdir checkpoints/encodec_lm/tb --port 6006
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run tensorboard \
+    --logdir checkpoints/encodec_lm/tb --port 6006
 
 # 浏览器访问: http://localhost:6006
 ```
 
 **预期结果**:
-- 训练 loss: ~7 → <5（约 20 epochs）
-- 验证 loss 应持续下降
+- 初始 val_loss ~4.0，应持续下降
 - 最佳模型保存在: `checkpoints/encodec_lm/best.pt`
 
 ### 3.2 FACodec LM 训练
 
 ```bash
-# 训练 FACodec 语言模型（约 4-6 小时）
-pixi run python src/train.py --config configs/facodec_lm.yaml
+# 训练 FACodec 语言模型（约 30-40 分钟）
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python src/train.py \
+    --config configs/facodec_lm.yaml
 ```
 
 **监控训练**:
 ```bash
-pixi run tensorboard --logdir checkpoints/facodec_lm/tb --port 6007
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run tensorboard \
+    --logdir checkpoints/facodec_lm/tb --port 6007
 ```
 
 ---
@@ -118,11 +123,9 @@ pixi run tensorboard --logdir checkpoints/facodec_lm/tb --port 6007
 ### 4.1 评估 EnCodec 模型
 
 ```bash
-# 创建结果目录
 mkdir -p results
 
-# 评估 EnCodec
-pixi run python scripts/run_eval.py \
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python scripts/run_eval.py \
     --config configs/encodec_lm.yaml \
     --split test \
     --out_json results/encodec_test.json
@@ -131,8 +134,7 @@ pixi run python scripts/run_eval.py \
 ### 4.2 评估 FACodec 模型
 
 ```bash
-# 评估 FACodec
-pixi run python scripts/run_eval.py \
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python scripts/run_eval.py \
     --config configs/facodec_lm.yaml \
     --split test \
     --out_json results/facodec_test.json
@@ -141,7 +143,7 @@ pixi run python scripts/run_eval.py \
 ### 4.3 比较结果
 
 ```bash
-pixi run python -c "
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python -c "
 import json
 for name, path in [('EnCodec', 'results/encodec_test.json'),
                    ('FACodec', 'results/facodec_test.json')]:
@@ -161,28 +163,33 @@ for name, path in [('EnCodec', 'results/encodec_test.json'),
 # 保存为 run_all.sh
 
 set -e
+PIXI="env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run"
 
-echo "=== Step 1: Extract EnCodec tokens (val/test) ==="
-pixi run python scripts/extract_tokens.py --codec encodec --split val
-pixi run python scripts/extract_tokens.py --codec encodec --split test
+echo "=== Step 1: Extract EnCodec tokens ==="
+$PIXI python scripts/extract_tokens.py \
+    --codec encodec \
+    --wsj0_root /home/franka/Development/mds5122/dataset/wsj0 \
+    --split all --device cuda
 
-echo "=== Step 2: Extract FACodec tokens (all) ==="
-pixi run python scripts/extract_tokens.py \
-    --codec facodec --split all \
+echo "=== Step 2: Extract FACodec tokens ==="
+$PIXI python scripts/extract_tokens.py \
+    --codec facodec \
+    --wsj0_root /home/franka/Development/mds5122/dataset/wsj0 \
+    --split all --device cuda \
     --facodec_repo /home/franka/Development/mds5122/FAcodec \
     --facodec_ckpt /home/franka/Development/mds5122/FAcodec/checkpoints/FAcodec.pth \
     --facodec_cfg /home/franka/Development/mds5122/FAcodec/configs/config.yml
 
 echo "=== Step 3: Train EnCodec LM ==="
-pixi run python src/train.py --config configs/encodec_lm.yaml
+$PIXI python src/train.py --config configs/encodec_lm.yaml
 
 echo "=== Step 4: Train FACodec LM ==="
-pixi run python src/train.py --config configs/facodec_lm.yaml
+$PIXI python src/train.py --config configs/facodec_lm.yaml
 
 echo "=== Step 5: Evaluate both models ==="
 mkdir -p results
-pixi run python scripts/run_eval.py --config configs/encodec_lm.yaml --split test --out_json results/encodec_test.json
-pixi run python scripts/run_eval.py --config configs/facodec_lm.yaml --split test --out_json results/facodec_test.json
+$PIXI python scripts/run_eval.py --config configs/encodec_lm.yaml --split test --out_json results/encodec_test.json
+$PIXI python scripts/run_eval.py --config configs/facodec_lm.yaml --split test --out_json results/facodec_test.json
 
 echo "=== Done! ==="
 ```
@@ -209,12 +216,12 @@ bash run_all.sh
 
 | 步骤 | 时间 |
 |------|------|
-| EnCodec token 提取 (val+test) | ~10 分钟 |
-| FACodec token 提取 (all) | ~30 分钟 |
-| EnCodec LM 训练 (100 epochs) | ~4-6 小时 |
-| FACodec LM 训练 (100 epochs) | ~4-6 小时 |
+| EnCodec token 提取 (all splits) | ~15 分钟 |
+| FACodec token 提取 (all splits) | ~15 分钟 |
+| EnCodec LM 训练 (100 epochs) | ~30-40 分钟 |
+| FACodec LM 训练 (100 epochs) | ~30-40 分钟 |
 | 评估 (两个模型) | ~10 分钟 |
-| **总计** | **~9-13 小时** |
+| **总计** | **~1.5-2 小时** |
 
 ---
 
@@ -229,15 +236,15 @@ batch_size: 16  # 原来是 32
 
 ### Q2: 训练中断后恢复
 ```bash
-# 目前不支持自动恢复，需从头训练
-# 可以减少 epochs 先跑完流程
-epochs: 30  # 原来是 100
+# 支持从最近的 checkpoint 自动恢复，直接重新运行训练命令即可：
+env -u HTTP_PROXY -u HTTPS_PROXY /home/franka/.pixi/bin/pixi run python src/train.py \
+    --config configs/encodec_lm.yaml
+# 程序会自动检测 checkpoints/ 目录下的最新 checkpoint 并续训
 ```
 
 ### Q3: 验证模型是否正常学习
 ```bash
-# 查看训练 loss 是否下降
-# 初始 loss ~6.9，应该持续下降到 ~5 以下
+# 查看 val_loss 是否下降
 tail -f training.log | grep "val_loss"
 ```
 

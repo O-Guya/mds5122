@@ -15,9 +15,10 @@ import torch
 import torchaudio
 from pathlib import Path
 
-# Codec vocab size (1024) + one BOS token
+# Codec vocab size (1024) + BOS token + PAD token
 VOCAB_SIZE = 1024
-BOS_ID = 1024  # also used as padding
+BOS_ID = 1024
+PAD_ID = 1025  # separate from BOS
 
 
 def _resample(wav: torch.Tensor, orig_sr: int, target_sr: int = 24000) -> torch.Tensor:

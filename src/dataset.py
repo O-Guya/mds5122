@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import Dataset
 
 BOS_ID = 1024
-PAD_ID = 1024  # same as BOS for simplicity
+PAD_ID = 1025  # separate from BOS to avoid embedding confusion
 
 
 class TokenDataset(Dataset):

@@ -23,7 +23,7 @@ from model import CodecLM
 
 def load_model(ckpt_path: str, model_cfg: dict, device: str = "cuda") -> CodecLM:
     model = CodecLM(
-        vocab_size=model_cfg.get("vocab_size", 1025),
+        vocab_size=model_cfg.get("vocab_size", 1026),
         d_model=model_cfg.get("d_model", 512),
         n_heads=model_cfg.get("n_heads", 8),
         n_layers=model_cfg.get("n_layers", 6),
@@ -44,8 +44,14 @@ def predict_file(
     device: str = "cuda",
     temperature: float = 1.0,
     top_k: int = 200,
+    train_max_len: int = 300,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Predict future speech given the first half of an utterance.
+
+    Args:
+        train_max_len: max sequence length used during training. Context and
+            generation are both capped to train_max_len // 2 so that inference
+            stays within the positional-embedding range seen during training.
 
     Returns:
         pred_wav: [1, 1, T_future] float32 at 24 kHz
@@ -62,10 +68,18 @@ def predict_file(
     context_wav = wav_24[:, :, :mid]            # [1, 1, mid]
     ref_wav     = wav_24[:, :, mid:]            # [1, 1, T_total-mid]
 
-    # Encode context at original sr (codec_wrapper resamples internally)
-    # Here wav is already 24kHz, so src_sr=24000
+    # Encode context
     ctx_tokens = codec.encode(context_wav, src_sr=24000)  # [1, T_ctx]
-    n_future = ref_wav.shape[-1] // (24000 // codec.frame_rate)  # approx token count
+
+    # Cap context and generation to training distribution:
+    # BOS(1) + ctx(n) + future(n) <= train_max_len  =>  n <= (train_max_len - 1) // 2
+    max_ctx = (train_max_len - 1) // 2          # 149 for train_max_len=300
+    max_future = train_max_len - 1 - max_ctx    # 150 for train_max_len=300
+    if ctx_tokens.shape[1] > max_ctx:
+        ctx_tokens = ctx_tokens[:, -max_ctx:]   # keep most-recent context tokens
+
+    n_future = ref_wav.shape[-1] // (24000 // codec.frame_rate)
+    n_future = min(n_future, max_future)
 
     # Prepend BOS and generate
     bos = torch.tensor([[BOS_ID]], dtype=torch.long, device=device)
@@ -75,13 +89,12 @@ def predict_file(
                               temperature=temperature, top_k=top_k)  # [1, n_future]
 
     pred_wav = codec.decode(pred_tokens)        # [1, 1, T_pred]
-    # Align length to reference
+    # Align to the shorter of the two — never pad prediction with silence,
+    # as that would artificially deflate STOI/PESQ for long utterances.
     T_ref = ref_wav.shape[-1]
     T_pred = pred_wav.shape[-1]
-    if T_pred > T_ref:
-        pred_wav = pred_wav[:, :, :T_ref]
-    elif T_pred < T_ref:
-        pad = torch.zeros(1, 1, T_ref - T_pred)
-        pred_wav = torch.cat([pred_wav.cpu(), pad], dim=-1)
+    T = min(T_ref, T_pred)
+    pred_wav = pred_wav[:, :, :T].cpu()
+    ref_wav  = ref_wav[:, :, :T].cpu()
 
-    return pred_wav.cpu(), ref_wav.cpu()
+    return pred_wav, ref_wav

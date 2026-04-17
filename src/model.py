@@ -2,8 +2,8 @@
 
 Architecture: GPT-2 style (pre-LayerNorm, causal self-attention).
 
-Vocabulary: 0..1023 = codec tokens, 1024 = BOS / PAD.
-Total vocab_size = 1025.
+Vocabulary: 0..1023 = codec tokens, 1024 = BOS, 1025 = PAD.
+Total vocab_size = 1026.
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ class CodecLM(nn.Module):
     """Decoder-only Transformer for next-speech-token prediction.
 
     Args:
-        vocab_size: size of token vocabulary including BOS (default 1025)
+        vocab_size: size of token vocabulary including BOS and PAD (default 1026)
         d_model: embedding / hidden dimension
         n_heads: number of attention heads
         n_layers: number of TransformerBlock layers
@@ -76,7 +76,7 @@ class CodecLM(nn.Module):
 
     def __init__(
         self,
-        vocab_size: int = 1025,
+        vocab_size: int = 1026,
         d_model: int = 512,
         n_heads: int = 8,
         n_layers: int = 6,
@@ -150,8 +150,9 @@ class CodecLM(nn.Module):
             # Trim to max_len if needed
             seq_in = seq[:, -self.max_len :]
             logits = self.forward(seq_in)[:, -1, :]  # [1, vocab_size]
-            # Mask BOS/PAD from generation
+            # Mask BOS (1024) and PAD (1025) from generation
             logits[:, 1024] = float("-inf")
+            logits[:, 1025] = float("-inf")
             logits = logits / max(temperature, 1e-9)
             if top_k > 0:
                 v, _ = torch.topk(logits, min(top_k, logits.shape[-1]))

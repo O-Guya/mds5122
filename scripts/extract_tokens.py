@@ -4,7 +4,7 @@
 Usage:
     pixi run python scripts/extract_tokens.py \
         --codec encodec \
-        --wsj0_root /home/franka/Development/mds5122/wsj0 \
+        --wsj0_root /home/franka/Development/mds5122/dataset/wsj0 \
         --out_dir /home/franka/Development/mds5122/token_cache \
         --split all
 
@@ -13,7 +13,7 @@ Usage:
         --facodec_repo /home/franka/Development/mds5122/FAcodec \
         --facodec_ckpt /path/to/facodec.pth \
         --facodec_cfg  /home/franka/Development/mds5122/FAcodec/configs/config.yml \
-        --wsj0_root /home/franka/Development/mds5122/wsj0 \
+        --wsj0_root /home/franka/Development/mds5122/dataset/wsj0 \
         --out_dir /home/franka/Development/mds5122/token_cache \
         --split all
 """
@@ -59,7 +59,7 @@ def extract_split(codec: CodecWrapper, split: str, wsj0_root: Path,
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--codec",        required=True, choices=["encodec", "facodec"])
-    p.add_argument("--wsj0_root",    default="/home/franka/Development/mds5122/wsj0")
+    p.add_argument("--wsj0_root",    default="/home/franka/Development/mds5122/dataset/wsj0")
     p.add_argument("--out_dir",      default="/home/franka/Development/mds5122/token_cache")
     p.add_argument("--split",        default="all", choices=["train","val","test","all"])
     p.add_argument("--device",       default="cuda")

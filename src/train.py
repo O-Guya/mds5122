@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from dataset import TokenDataset, collate_fn
 from model import CodecLM
 
-PAD_ID = 1024
+PAD_ID = 1025
 
 
 def build_lr_schedule(optimizer, warmup_steps: int, total_steps: int):
@@ -58,7 +58,7 @@ def train(cfg: dict):
     # ── Model ──────────────────────────────────────────────────────────────
     model_cfg = cfg.get("model", {})
     model = CodecLM(
-        vocab_size=model_cfg.get("vocab_size", 1025),
+        vocab_size=model_cfg.get("vocab_size", 1026),
         d_model=model_cfg.get("d_model", 512),
         n_heads=model_cfg.get("n_heads", 8),
         n_layers=model_cfg.get("n_layers", 6),
@@ -77,7 +77,7 @@ def train(cfg: dict):
     total_steps = epochs * len(train_dl)
     scheduler = build_lr_schedule(optimizer, cfg.get("warmup_steps", 500), total_steps)
 
-    criterion = nn.CrossEntropyLoss(ignore_index=PAD_ID)
+    criterion = nn.CrossEntropyLoss(ignore_index=PAD_ID, label_smoothing=0.1)
 
     global_step = 0
     best_val_loss = float("inf")
@@ -137,19 +137,17 @@ def train(cfg: dict):
         print(f"Epoch {epoch:3d} | train_loss={running_loss/len(train_dl):.4f} | val_loss={avg_val:.4f}")
 
         # ── Checkpoint ────────────────────────────────────────────────────
+        ckpt = {"epoch": epoch, "model": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "scheduler": scheduler.state_dict(),
+                "global_step": global_step,
+                "val_loss": avg_val, "best_val_loss": best_val_loss}
         if avg_val < best_val_loss:
             best_val_loss = avg_val
-            torch.save({"epoch": epoch, "model": model.state_dict(),
-                        "optimizer": optimizer.state_dict(),
-                        "scheduler": scheduler.state_dict(),
-                        "global_step": global_step},
-                       out_dir / "best.pt")
+            ckpt["best_val_loss"] = best_val_loss
+            torch.save(ckpt, out_dir / "best.pt")
         if epoch % cfg.get("save_freq", 10) == 0:
-            torch.save({"epoch": epoch, "model": model.state_dict(),
-                        "optimizer": optimizer.state_dict(),
-                        "scheduler": scheduler.state_dict(),
-                        "global_step": global_step},
-                       out_dir / f"epoch_{epoch:04d}.pt")
+            torch.save(ckpt, out_dir / f"epoch_{epoch:04d}.pt")
 
     writer.close()
     print(f"Training complete. Best val loss: {best_val_loss:.4f}")
